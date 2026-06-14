@@ -64,14 +64,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check cluster config
+        id: check
+        run: |
+          if [ -n "${{ secrets.KUBE_CONFIG }}" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::KUBE_CONFIG secret not set, skipping deploy"
+          fi
+
       - uses: azure/setup-kubectl@v4
+        if: steps.check.outputs.configured == 'true'
 
       - name: Configure kubeconfig
+        if: steps.check.outputs.configured == 'true'
         run: |
           mkdir -p ~/.kube
           echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > ~/.kube/config
 
       - name: Deploy
+        if: steps.check.outputs.configured == 'true'
         run: |
           kubectl apply -f k8s/
           kubectl set image deployment/zero-to-prod-app app=${{ env.IMAGE }}:${{ github.sha }}
