@@ -58,7 +58,7 @@ flowchart TB
 - [x] **Phase 2** - Ansible provisioning (Docker, k3s, firewall)
 - [x] **Phase 3** - Kubernetes manifests + manual deploy
 - [x] **Phase 4** - CI/CD via GitHub Actions
-- [ ] Phase 5 - Monitoring (Prometheus, Grafana, Alertmanager -> Telegram)
+- [x] **Phase 5** - Monitoring (Prometheus, Grafana, Alertmanager -> Telegram)
 - [ ] Phase 6 - Final docs polish
 
 ## App
@@ -225,7 +225,68 @@ pointing at the VM's public IP (see "Accessing the k3s cluster" above):
 base64 -w0 kubeconfig | gh secret set KUBE_CONFIG --repo flexxrap/zero-to-prod
 ```
 
+## Monitoring
+
+`/monitoring` holds the `kube-prometheus-stack` (Prometheus + Grafana +
+Alertmanager) config, plus a `ServiceMonitor`/`PrometheusRule` for the app and
+a Grafana dashboard.
+
+- `values.yaml` - Helm values tuned for a small single-node VM (low resource
+  requests, 1-day retention, cluster-wide ServiceMonitor/Rule selectors)
+- `values.secret.yaml.example` - Telegram Alertmanager receiver, copy to
+  `values.secret.yaml` (gitignored) and fill in your chat ID
+- `service-monitor.yaml` - scrapes `/metrics` on the app's Service every 15s
+- `alert-rules.yaml` - `AppDown` alert if `up == 0` for more than 1 minute
+- `dashboards/zero-to-prod-app.json` - request rate, p95 latency, node CPU
+  and memory
+
+### Install
+
+```bash
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+
+kubectl create namespace monitoring
+
+# Telegram bot token, mounted into Alertmanager as a file - never goes into git
+kubectl create secret generic telegram-bot-token \
+  --from-literal=token=<YOUR_BOT_TOKEN> \
+  -n monitoring
+
+cp monitoring/values.secret.yaml.example monitoring/values.secret.yaml
+# edit values.secret.yaml: set your Telegram chat_id
+
+helm install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+  -n monitoring \
+  -f monitoring/values.yaml \
+  -f monitoring/values.secret.yaml
+
+kubectl apply -f monitoring/service-monitor.yaml
+kubectl apply -f monitoring/alert-rules.yaml
+
+kubectl create configmap zero-to-prod-dashboard \
+  --from-file=monitoring/dashboards/zero-to-prod-app.json \
+  -n monitoring
+kubectl label configmap zero-to-prod-dashboard grafana_dashboard=1 -n monitoring
+```
+
+`monitoring/values.secret.yaml` is gitignored - never commit it.
+
+### Open Grafana
+
+```bash
+kubectl port-forward -n monitoring svc/kube-prometheus-stack-grafana 3000:80
+
+# default user is admin, password:
+kubectl get secret kube-prometheus-stack-grafana -n monitoring \
+  -o jsonpath="{.data.admin-password}" | base64 -d
+```
+
+Open `http://localhost:3000` and find the "Zero to Prod - App & Cluster" dashboard.
+
+_TODO: add a screenshot of the dashboard here once the stack is running._
+
 ## What's next
 
-Phase 5: monitoring - Prometheus + Grafana + Alertmanager on k3s, a Grafana
-dashboard for the app's `/metrics`, and an alert to Telegram if the app goes down.
+Phase 6: final README polish - full step-by-step "zero to prod" guide,
+`CONTRIBUTING.md`, `LICENSE`, and a "what I'd improve next" section.
