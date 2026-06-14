@@ -1,10 +1,33 @@
 # Zero to Prod
 
 [![CI/CD](https://github.com/flexxrap/zero-to-prod/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/flexxrap/zero-to-prod/actions/workflows/ci-cd.yml)
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
+![Terraform](https://img.shields.io/badge/Terraform-7B42BC?logo=terraform&logoColor=white)
+![Ansible](https://img.shields.io/badge/Ansible-EE0000?logo=ansible&logoColor=white)
+![Kubernetes](https://img.shields.io/badge/Kubernetes-326CE5?logo=kubernetes&logoColor=white)
+![k3s](https://img.shields.io/badge/k3s-FFC61C?logo=k3s&logoColor=black)
+![Prometheus](https://img.shields.io/badge/Prometheus-E6522C?logo=prometheus&logoColor=white)
+![Grafana](https://img.shields.io/badge/Grafana-F46800?logo=grafana&logoColor=white)
+![Yandex Cloud](https://img.shields.io/badge/Yandex_Cloud-FF0000?logo=yandexcloud&logoColor=white)
 
 A small DevOps portfolio project: take an empty cloud VM all the way to a running,
 monitored application using IaC, configuration management, Kubernetes, CI/CD and
 observability.
+
+## Quick start: zero to prod
+
+1. **Provision the VM** - Terraform creates a Yandex Cloud VM, network and
+   security group. See [Infrastructure](#infrastructure-terraform).
+2. **Configure the VM** - Ansible installs Docker and k3s, and sets up the
+   firewall and swap. See [Configuration](#configuration-ansible).
+3. **Deploy the app** - apply the manifests in `/k8s` with `kubectl`. See
+   [Kubernetes manifests](#kubernetes-manifests).
+4. **Wire up CI/CD** - pushes to `master` lint, test, build, push to GHCR and
+   deploy automatically. See [CI/CD](#cicd).
+5. **Add monitoring** - install `kube-prometheus-stack` and get a Telegram
+   alert if the app goes down. See [Monitoring](#monitoring).
 
 ## Architecture
 
@@ -46,10 +69,10 @@ flowchart TB
 |-----------------------|---------------------------------------------------|
 | `/app`                | FastAPI demo app + Dockerfile                    |
 | `/terraform`          | IaC for the Yandex Cloud VM, network, security group |
-| `/ansible`            | VM configuration: Docker, k3s, firewall (Phase 2) |
-| `/k8s`                | Kubernetes manifests (Phase 3)                   |
-| `/.github/workflows`  | CI/CD pipelines (Phase 4)                        |
-| `/monitoring`         | Prometheus/Grafana/Alertmanager setup (Phase 5)  |
+| `/ansible`            | VM configuration: Docker, k3s, firewall          |
+| `/k8s`                | Kubernetes manifests for the app                 |
+| `/.github/workflows`  | CI/CD pipeline                                   |
+| `/monitoring`         | Prometheus/Grafana/Alertmanager setup            |
 | `/docs`               | Additional documentation                         |
 
 ## Status
@@ -59,7 +82,7 @@ flowchart TB
 - [x] **Phase 3** - Kubernetes manifests + manual deploy
 - [x] **Phase 4** - CI/CD via GitHub Actions
 - [x] **Phase 5** - Monitoring (Prometheus, Grafana, Alertmanager -> Telegram)
-- [ ] Phase 6 - Final docs polish
+- [x] **Phase 6** - Final docs polish
 
 ## App
 
@@ -177,8 +200,9 @@ kubectl get nodes
 
 ### Manual deployment
 
-CI/CD isn't wired up yet (Phase 4), so for now the image is built and loaded
-on the VM directly:
+The CI/CD pipeline (see [CI/CD](#cicd)) builds and deploys the image
+automatically on every push to `master`. For a first deploy, or to test
+without CI, build and load the image on the VM directly:
 
 ```bash
 # on the VM, with the app/ directory copied over
@@ -286,7 +310,26 @@ Open `http://localhost:3000` and find the "Zero to Prod - App & Cluster" dashboa
 
 _TODO: add a screenshot of the dashboard here once the stack is running._
 
-## What's next
+## What I'd improve next
 
-Phase 6: final README polish - full step-by-step "zero to prod" guide,
-`CONTRIBUTING.md`, `LICENSE`, and a "what I'd improve next" section.
+- **HTTPS** - cert-manager + Let's Encrypt on the Ingress instead of plain HTTP
+- **HA** - a multi-node k3s cluster instead of a single VM as a single point
+  of failure
+- **GitOps** - replace the `kubectl apply` deploy step with Argo CD or Flux
+  watching `/k8s`
+- **Secrets management** - Sealed Secrets or Vault instead of manually
+  created Kubernetes secrets
+- **Persistent storage** - Prometheus currently uses `emptyDir`; add a PVC so
+  metrics survive pod restarts
+- **Autoscaling** - a HorizontalPodAutoscaler for the app based on CPU or
+  request rate
+- **Staging environment** - deploy PRs to a separate namespace before merging
+  to `master`
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## License
+
+[MIT](LICENSE)
