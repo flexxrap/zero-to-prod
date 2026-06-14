@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zero-to-prod-app
+  labels:
+    app: zero-to-prod-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: zero-to-prod-app
+  template:
+    metadata:
+      labels:
+        app: zero-to-prod-app
+    spec:
+      containers:
+        - name: app
+          image: ghcr.io/flexxrap/zero-to-prod-app:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
