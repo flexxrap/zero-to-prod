@@ -1,0 +1,7 @@
+- name: Provision zero-to-prod VM
+  hosts: vm
+  become: true
+  roles:
+    - base
+    - docker
+    - k3s
