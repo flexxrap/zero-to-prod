@@ -54,7 +54,7 @@ flowchart TB
 
 - [x] **Phase 1** - Demo app + Terraform skeleton
 - [x] **Phase 2** - Ansible provisioning (Docker, k3s, firewall)
-- [ ] Phase 3 - Kubernetes manifests + manual deploy
+- [x] **Phase 3** - Kubernetes manifests + manual deploy
 - [ ] Phase 4 - CI/CD via GitHub Actions
 - [ ] Phase 5 - Monitoring (Prometheus, Grafana, Alertmanager -> Telegram)
 - [ ] Phase 6 - Final docs polish
@@ -164,7 +164,42 @@ kubectl get nodes
 
 `kubeconfig*` is gitignored - never commit it.
 
+## Kubernetes manifests
+
+`/k8s` contains:
+
+- `deployment.yaml` - 2 replicas, CPU/memory requests and limits,
+  liveness/readiness probes on `/health`
+- `service.yaml` - ClusterIP service exposing the app on port 80
+- `ingress.yaml` - routes `/` to the service via k3s's built-in Traefik
+
+### Manual deployment
+
+CI/CD isn't wired up yet (Phase 4), so for now the image is built and loaded
+on the VM directly:
+
+```bash
+# on the VM, with the app/ directory copied over
+cd app
+docker build -t ghcr.io/flexxrap/zero-to-prod-app:latest .
+
+# load the image into k3s's containerd so it doesn't try to pull from GHCR
+docker save ghcr.io/flexxrap/zero-to-prod-app:latest | sudo k3s ctr images import -
+```
+
+Then apply the manifests from your local machine (using the kubeconfig from
+the previous section) or directly on the VM:
+
+```bash
+kubectl apply -f k8s/
+
+kubectl get pods
+kubectl get svc
+curl http://VM_IP/health
+curl http://VM_IP/api/info
+```
+
 ## What's next
 
-Phase 3: Kubernetes manifests (Deployment, Service, Ingress) and manual
-`kubectl` deployment of the demo app onto the k3s cluster.
+Phase 4: GitHub Actions CI/CD - lint and test the app, build and push the
+image to GHCR, and deploy it to the k3s cluster automatically.
