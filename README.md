@@ -240,6 +240,9 @@ On push to `master` only, after lint/test pass:
 
 GHCR push uses the built-in `GITHUB_TOKEN`, no extra setup needed.
 
+If the `KUBE_CONFIG` secret isn't set, the deploy job skips with a warning
+instead of failing - useful before the cluster exists yet.
+
 ### One-time setup (run locally, not in this repo)
 
 The deploy job needs a `KUBE_CONFIG` secret - a base64-encoded kubeconfig
