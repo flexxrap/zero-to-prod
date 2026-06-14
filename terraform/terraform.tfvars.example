@@ -1,0 +1,10 @@
+# Copy this file to terraform.tfvars and fill in your own values.
+# terraform.tfvars is gitignored - never commit it.
+
+cloud_id  = "your-cloud-id"
+folder_id = "your-folder-id"
+zone      = "ru-central1-a"
+
+vm_name             = "zero-to-prod"
+ssh_public_key_path = "~/.ssh/id_ed25519.pub"
+ssh_user            = "ubuntu"
