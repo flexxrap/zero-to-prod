@@ -1,5 +1,7 @@
 # Zero to Prod
 
+[![CI/CD](https://github.com/flexxrap/zero-to-prod/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/flexxrap/zero-to-prod/actions/workflows/ci-cd.yml)
+
 A small DevOps portfolio project: take an empty cloud VM all the way to a running,
 monitored application using IaC, configuration management, Kubernetes, CI/CD and
 observability.
@@ -55,7 +57,7 @@ flowchart TB
 - [x] **Phase 1** - Demo app + Terraform skeleton
 - [x] **Phase 2** - Ansible provisioning (Docker, k3s, firewall)
 - [x] **Phase 3** - Kubernetes manifests + manual deploy
-- [ ] Phase 4 - CI/CD via GitHub Actions
+- [x] **Phase 4** - CI/CD via GitHub Actions
 - [ ] Phase 5 - Monitoring (Prometheus, Grafana, Alertmanager -> Telegram)
 - [ ] Phase 6 - Final docs polish
 
@@ -199,7 +201,31 @@ curl http://VM_IP/health
 curl http://VM_IP/api/info
 ```
 
+## CI/CD
+
+On every push and pull request to `master`:
+
+- lint the app with `ruff`
+- run `pytest`
+
+On push to `master` only, after lint/test pass:
+
+- build the Docker image and push it to `ghcr.io/flexxrap/zero-to-prod-app`
+  (tagged `latest` and with the commit SHA)
+- apply `k8s/` and roll out the new image to the k3s cluster via `kubectl`
+
+GHCR push uses the built-in `GITHUB_TOKEN`, no extra setup needed.
+
+### One-time setup (run locally, not in this repo)
+
+The deploy job needs a `KUBE_CONFIG` secret - a base64-encoded kubeconfig
+pointing at the VM's public IP (see "Accessing the k3s cluster" above):
+
+```bash
+base64 -w0 kubeconfig | gh secret set KUBE_CONFIG --repo flexxrap/zero-to-prod
+```
+
 ## What's next
 
-Phase 4: GitHub Actions CI/CD - lint and test the app, build and push the
-image to GHCR, and deploy it to the k3s cluster automatically.
+Phase 5: monitoring - Prometheus + Grafana + Alertmanager on k3s, a Grafana
+dashboard for the app's `/metrics`, and an alert to Telegram if the app goes down.
