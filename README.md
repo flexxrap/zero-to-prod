@@ -53,7 +53,7 @@ flowchart TB
 ## Status
 
 - [x] **Phase 1** - Demo app + Terraform skeleton
-- [ ] Phase 2 - Ansible provisioning (Docker, k3s, firewall)
+- [x] **Phase 2** - Ansible provisioning (Docker, k3s, firewall)
 - [ ] Phase 3 - Kubernetes manifests + manual deploy
 - [ ] Phase 4 - CI/CD via GitHub Actions
 - [ ] Phase 5 - Monitoring (Prometheus, Grafana, Alertmanager -> Telegram)
@@ -128,7 +128,43 @@ terraform apply
 
 `terraform.tfvars` and `*.tfstate` are gitignored - never commit them.
 
+## Configuration (Ansible)
+
+Takes the fresh VM from `terraform apply` to a ready k3s node:
+
+- `base` role - apt updates, base packages, ufw firewall (22/80/443/6443, deny
+  the rest), 1 GB swap file, an unprivileged `deploy` user with sudo and your
+  SSH key
+- `docker` role - installs Docker CE from the official repo, adds `deploy` to
+  the `docker` group
+- `k3s` role - installs k3s via the official install script
+
+### Run
+
+```bash
+cd ansible
+ansible-galaxy collection install -r requirements.yml
+
+cp inventory.example.ini inventory.ini
+# edit inventory.ini: set ansible_host to terraform's vm_external_ip output
+
+ansible-playbook playbook.yml
+```
+
+`inventory.ini` is gitignored - never commit it.
+
+### Accessing the k3s cluster
+
+```bash
+scp ubuntu@VM_IP:/etc/rancher/k3s/k3s.yaml ./kubeconfig
+# edit kubeconfig: replace 127.0.0.1 with VM_IP
+export KUBECONFIG=$(pwd)/kubeconfig
+kubectl get nodes
+```
+
+`kubeconfig*` is gitignored - never commit it.
+
 ## What's next
 
-Phase 2: an Ansible playbook to take the fresh VM from `terraform apply` to a
-ready k3s node (updates, firewall, Docker, k3s install).
+Phase 3: Kubernetes manifests (Deployment, Service, Ingress) and manual
+`kubectl` deployment of the demo app onto the k3s cluster.
