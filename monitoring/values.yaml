@@ -1,0 +1,61 @@
+# Values for prometheus-community/kube-prometheus-stack, tuned for a small
+# single-node k3s VM. Install with:
+#   helm install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+#     -n monitoring -f values.yaml -f values.secret.yaml
+
+prometheus:
+  prometheusSpec:
+    retention: 1d
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    # Watch ServiceMonitors/PrometheusRules in any namespace with any labels -
+    # simpler than label-matching for a single-tenant demo cluster.
+    serviceMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorSelector: {}
+    serviceMonitorNamespaceSelector: {}
+    ruleSelectorNilUsesHelmValues: false
+    ruleSelector: {}
+    ruleNamespaceSelector: {}
+
+alertmanager:
+  alertmanagerSpec:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
+    # Telegram bot token is mounted from this secret, created manually:
+    #   kubectl create secret generic telegram-bot-token --from-literal=token=<TOKEN> -n monitoring
+    secrets:
+      - telegram-bot-token
+  config:
+    route:
+      receiver: telegram
+      group_by: ["alertname"]
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 1h
+    # Real receiver (bot_token_file + chat_id) comes from values.secret.yaml.
+    receivers:
+      - name: telegram
+
+grafana:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"

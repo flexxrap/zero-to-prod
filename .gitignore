@@ -27,6 +27,9 @@ venv/
 .env.*
 !.env.example
 
+# Monitoring
+monitoring/values.secret.yaml
+
 # Kubernetes
 kubeconfig*
 *.kubeconfig
